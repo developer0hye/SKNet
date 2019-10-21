@@ -3,11 +3,10 @@ from torch import nn
 
 
 class SKConv(nn.Module):
-    def __init__(self, features, WH, M, G, r, stride=1 ,L=32):
+    def __init__(self, features, M, G, r, stride=1 ,L=32):
         """ Constructor
         Args:
             features: input channel dimensionality.
-            WH: input spatial dimensionality, used for GAP kernel size.
             M: the number of branchs.
             G: num of convolution groups.
             r: the radio for compute d, the length of z.
@@ -25,7 +24,6 @@ class SKConv(nn.Module):
                 nn.BatchNorm2d(features),
                 nn.ReLU(inplace=False)
             ))
-        # self.gap = nn.AvgPool2d(int(WH/stride))
         self.fc = nn.Linear(features, d)
         self.fcs = nn.ModuleList([])
         for i in range(M):
@@ -63,7 +61,7 @@ class SKConv(nn.Module):
 
 
 class SKUnit(nn.Module):
-    def __init__(self, in_features, out_features, WH, M, G, r, mid_features=None, stride=1, L=32):
+    def __init__(self, in_features, out_features, M, G, r, mid_features=None, stride=1, L=32):
         """ Constructor
         Args:
             in_features: input channel dimensionality.
@@ -82,7 +80,7 @@ class SKUnit(nn.Module):
         self.feas = nn.Sequential(
             nn.Conv2d(in_features, mid_features, 1, stride=1),
             nn.BatchNorm2d(mid_features),
-            SKConv(mid_features, WH, M, G, r, stride=stride, L=L),
+            SKConv(mid_features, M, G, r, stride=stride, L=L),
             nn.BatchNorm2d(mid_features),
             nn.Conv2d(mid_features, out_features, 1, stride=1),
             nn.BatchNorm2d(out_features)
@@ -108,27 +106,27 @@ class SKNet(nn.Module):
             nn.BatchNorm2d(64)
         ) # 32x32
         self.stage_1 = nn.Sequential(
-            SKUnit(64, 256, 32, 2, 8, 2, stride=2),
+            SKUnit(64, 256, 2, 8, 2, stride=2),
             nn.ReLU(),
-            SKUnit(256, 256, 32, 2, 8, 2),
+            SKUnit(256, 256, 2, 8, 2),
             nn.ReLU(),
-            SKUnit(256, 256, 32, 2, 8, 2),
+            SKUnit(256, 256, 2, 8, 2),
             nn.ReLU()
         ) # 32x32
         self.stage_2 = nn.Sequential(
-            SKUnit(256, 512, 32, 2, 8, 2, stride=2),
+            SKUnit(256, 512, 2, 8, 2, stride=2),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 8, 2),
+            SKUnit(512, 512, 2, 8, 2),
             nn.ReLU(),
-            SKUnit(512, 512, 32, 2, 8, 2),
+            SKUnit(512, 512, 2, 8, 2),
             nn.ReLU()
         ) # 16x16
         self.stage_3 = nn.Sequential(
-            SKUnit(512, 1024, 32, 2, 8, 2, stride=2),
+            SKUnit(512, 1024, 2, 8, 2, stride=2),
             nn.ReLU(),
-            SKUnit(1024, 1024, 32, 2, 8, 2),
+            SKUnit(1024, 1024, 2, 8, 2),
             nn.ReLU(),
-            SKUnit(1024, 1024, 32, 2, 8, 2),
+            SKUnit(1024, 1024, 2, 8, 2),
             nn.ReLU()
         ) # 8x8
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -148,7 +146,7 @@ class SKNet(nn.Module):
 
 if __name__=='__main__':
     x = torch.rand(8, 64, 32, 32)
-    conv = SKConv(64, 32, 3, 8, 2)
+    conv = SKConv(64, 3, 8, 2)
     out = conv(x)
     criterion = nn.L1Loss()
     loss = criterion(out, x)
