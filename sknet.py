@@ -36,7 +36,7 @@ class SKConv(nn.Module):
 
         feas = []
         
-        for i, conv in enumerate(self.convs):
+        for conv in self.convs:
             fea = conv(x).unsqueeze_(dim=1)
             feas.append(fea)
         
@@ -48,7 +48,7 @@ class SKConv(nn.Module):
         
         attention_vectors = []
         
-        for i, fc in enumerate(self.fcs):
+        for fc in self.fcs:
             vector = fc(fea_z).unsqueeze_(dim=1)
             attention_vectors.append(vector)
         
