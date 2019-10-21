@@ -35,22 +35,27 @@ class SKConv(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         
     def forward(self, x):
+
+        feas = []
+        
         for i, conv in enumerate(self.convs):
             fea = conv(x).unsqueeze_(dim=1)
-            if i == 0:
-                feas = fea
-            else:
-                feas = torch.cat([feas, fea], dim=1)
+            feas.append(fea)
+        
+        feas = torch.cat(feas, 1)
+        
         fea_U = torch.sum(feas, dim=1)
-        # fea_s = self.gap(fea_U).squeeze_()
         fea_s = fea_U.mean(-1).mean(-1)
         fea_z = self.fc(fea_s)
+        
+        attention_vectors = []
+        
         for i, fc in enumerate(self.fcs):
             vector = fc(fea_z).unsqueeze_(dim=1)
-            if i == 0:
-                attention_vectors = vector
-            else:
-                attention_vectors = torch.cat([attention_vectors, vector], dim=1)
+            attention_vectors.append(vector)
+        
+        attention_vectors = torch.cat(attention_vectors, 1)
+        
         attention_vectors = self.softmax(attention_vectors)
         attention_vectors = attention_vectors.unsqueeze(-1).unsqueeze(-1)
         fea_v = (feas * attention_vectors).sum(dim=1)
@@ -126,11 +131,9 @@ class SKNet(nn.Module):
             SKUnit(1024, 1024, 32, 2, 8, 2),
             nn.ReLU()
         ) # 8x8
-        self.pool = nn.AvgPool2d(8)
-        self.classifier = nn.Sequential(
-            nn.Linear(1024, class_num),
-            # nn.Softmax(dim=1)
-        )
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Linear(1024, class_num)
+
 
     def forward(self, x):
         fea = self.basic_conv(x)
